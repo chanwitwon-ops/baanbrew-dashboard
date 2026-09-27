@@ -33,15 +33,23 @@ export function computeKpis(sales) {
   };
 }
 
-// ยอดขายรวมรายวัน เรียงตามวันที่
+// ยอดขายรวมรายวัน เรียงตามวันที่ พร้อมค่าเฉลี่ยเคลื่อนที่ 7 วัน (ma7)
+// ma7 ของแต่ละวัน = ค่าเฉลี่ยยอดขายของวันนั้นย้อนหลังไป 7 วัน (รวมวันนั้นเอง)
+// ใช้ทับเส้นรายวันที่แกว่งเยอะ ให้เห็นแนวโน้มชัดขึ้น
 export function dailySales(sales) {
   const byDate = new Map();
   for (const r of sales) {
     byDate.set(r.date, (byDate.get(r.date) || 0) + r.revenue);
   }
-  return [...byDate.entries()]
+  const days = [...byDate.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([date, revenue]) => ({ date, revenue }));
+
+  return days.map((d, i) => {
+    const window = days.slice(Math.max(0, i - 6), i + 1);
+    const ma7 = window.reduce((sum, w) => sum + w.revenue, 0) / window.length;
+    return { ...d, ma7 };
+  });
 }
 
 // ยอดขายแยกสาขา เรียงจากมากไปน้อย

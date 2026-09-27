@@ -26,6 +26,8 @@ import {
 } from './lib/metrics';
 
 const currency = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
+const thaiShortDate = (dateStr) =>
+  new Date(`${dateStr}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
 const ACCENT = '#9c5f2d';
 const branchColors = ['#5b3a29', '#c98a3e', '#b1502f', '#e6c358', '#7a3b46'];
 
@@ -103,10 +105,16 @@ export default function App() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={daily}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ead2b3" />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#7c4a26' }} minTickGap={30} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={thaiShortDate}
+                tick={{ fontSize: 12, fill: '#7c4a26' }}
+                minTickGap={40}
+              />
               <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12, fill: '#7c4a26' }} />
-              <Tooltip formatter={(v) => `฿${currency.format(v)}`} />
-              <Line type="monotone" dataKey="revenue" stroke={ACCENT} dot={false} strokeWidth={2} />
+              <Tooltip labelFormatter={thaiShortDate} formatter={(v) => `฿${currency.format(v)}`} />
+              <Line type="monotone" dataKey="revenue" name="รายวัน" stroke={ACCENT} strokeOpacity={0.3} dot={false} strokeWidth={1.5} />
+              <Line type="monotone" dataKey="ma7" name="เฉลี่ย 7 วัน" stroke={ACCENT} dot={false} strokeWidth={2.5} />
             </LineChart>
           </ResponsiveContainer>
         </div>
