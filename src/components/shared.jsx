@@ -1,10 +1,18 @@
 export const currency = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
+export const currency2 = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const thaiShortDate = (dateStr) =>
   new Date(`${dateStr}T00:00:00`).toLocaleDateString('th-TH', {
     day: 'numeric',
     month: 'short',
     year: '2-digit',
+  });
+
+export const thaiFullDate = (dateStr) =>
+  new Date(`${dateStr}T00:00:00`).toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 
 export const ACCENT = '#9c5f2d';

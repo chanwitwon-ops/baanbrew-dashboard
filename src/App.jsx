@@ -5,6 +5,7 @@ import CustomerSection from './components/CustomerSection';
 import DailySalesChart from './components/DailySalesChart';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
+import { thaiFullDate } from './components/shared';
 import {
   computeKpis,
   customerKpis,
@@ -60,11 +61,21 @@ export default function App() {
   const byGender = customersByGender(customers);
   const newByMonth = newCustomersByMonth(customers);
 
+  const rangeStart = daily[0]?.date;
+  const rangeEnd = daily[daily.length - 1]?.date;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-3xl font-semibold tracking-tight text-coffee-800 dark:text-coffee-100">
-        ☕ บ้านบรู Dashboard
-      </h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-3xl font-semibold tracking-tight text-coffee-800 dark:text-coffee-100">
+          ☕ บ้านบรู Dashboard
+        </h1>
+        {rangeStart && rangeEnd && (
+          <p className="text-sm text-coffee-500 dark:text-coffee-400">
+            {thaiFullDate(rangeStart)} ถึง {thaiFullDate(rangeEnd)}
+          </p>
+        )}
+      </div>
 
       <KpiCards kpis={kpis} />
       <DailySalesChart daily={daily} />
