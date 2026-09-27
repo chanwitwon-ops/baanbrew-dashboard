@@ -27,7 +27,7 @@ import {
 
 const currency = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
 const ACCENT = '#9c5f2d';
-const branchColors = ['#7c4a26', '#ba7638', '#d9a441', '#c2703a', '#8a6d55'];
+const branchColors = ['#5b3a29', '#c98a3e', '#b1502f', '#e6c358', '#7a3b46'];
 
 const CARD = 'rounded-xl border border-coffee-200 bg-white p-4 shadow-sm dark:border-coffee-700 dark:bg-coffee-900';
 const SECTION_TITLE = 'mb-2 text-lg font-medium text-coffee-900 dark:text-coffee-100';
