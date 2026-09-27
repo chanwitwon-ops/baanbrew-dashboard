@@ -33,20 +33,39 @@ export function computeKpis(sales) {
   };
 }
 
+// วันถัดไปของ "YYYY-MM-DD" โดยคำนวณล้วนๆ ไม่ผ่าน toISOString()/timezone
+// (ถ้าใช้ Date + toISOString วันที่จะเลื่อนได้เหมือน datetime ของแถวขาย)
+function nextDay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
 // ยอดขายรวมรายวัน เรียงตามวันที่ พร้อมค่าเฉลี่ยเคลื่อนที่ 7 วัน (ma7)
-// ma7 ของแต่ละวัน = ค่าเฉลี่ยยอดขายของวันนั้นย้อนหลังไป 7 วัน (รวมวันนั้นเอง)
-// ใช้ทับเส้นรายวันที่แกว่งเยอะ ให้เห็นแนวโน้มชัดขึ้น
+// เติมวันที่ไม่มียอดขายเป็น 0 ก่อน เพื่อให้หน้าต่าง "7 วัน" ของ ma7 ครอบคลุม
+// ช่วงเวลาจริง 7 วันปฏิทินเสมอ (ถ้าข้ามวันที่ขาดไปเฉยๆ หน้าต่างจะยาวเกิน 7 วันจริง)
+// ma7 ของวันที่ i คือค่าเฉลี่ยยอดขาย 7 วันล่าสุด (รวมวันนั้น) — เป็น null จนกว่าจะมีข้อมูลครบ 7 วัน
 export function dailySales(sales) {
   const byDate = new Map();
   for (const r of sales) {
     byDate.set(r.date, (byDate.get(r.date) || 0) + r.revenue);
   }
-  const days = [...byDate.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([date, revenue]) => ({ date, revenue }));
+
+  const dates = [...byDate.keys()].sort();
+  if (dates.length === 0) return [];
+
+  const days = [];
+  for (let date = dates[0]; date <= dates[dates.length - 1]; date = nextDay(date)) {
+    days.push({ date, revenue: byDate.get(date) || 0 });
+  }
 
   return days.map((d, i) => {
-    const window = days.slice(Math.max(0, i - 6), i + 1);
+    if (i < 6) return { ...d, ma7: null };
+    const window = days.slice(i - 6, i + 1);
     const ma7 = window.reduce((sum, w) => sum + w.revenue, 0) / window.length;
     return { ...d, ma7 };
   });
