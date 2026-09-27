@@ -55,6 +55,48 @@ export function salesByBranch(sales) {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
+// แปลงแถวดิบจาก customers.csv
+export function parseCustomerRows(rows) {
+  return rows
+    .filter((r) => r.customer_id)
+    .map((r) => ({ ...r, joinMonth: String(r.joined_date).slice(0, 7) }));
+}
+
+// KPI ลูกค้า: จำนวนลูกค้าทั้งหมด, ลูกค้าใหม่ในเดือนล่าสุดที่มีข้อมูล
+export function customerKpis(customers) {
+  const total = customers.length;
+  const latestMonth = customers.reduce((max, c) => (c.joinMonth > max ? c.joinMonth : max), '');
+  const newThisMonth = customers.filter((c) => c.joinMonth === latestMonth).length;
+  return { total, latestMonth, newThisMonth };
+}
+
+const AGE_GROUP_ORDER = ['ต่ำกว่า 18', '18-24', '25-34', '35-44', '45-54', '55+'];
+
+// จำนวนลูกค้าตามช่วงอายุ เรียงจากอายุน้อยไปมาก
+export function customersByAgeGroup(customers) {
+  const counts = new Map(AGE_GROUP_ORDER.map((a) => [a, 0]));
+  for (const c of customers) counts.set(c.age_group, (counts.get(c.age_group) || 0) + 1);
+  return AGE_GROUP_ORDER.map((age) => ({ age, count: counts.get(age) || 0 }));
+}
+
+// จำนวนลูกค้าตามเพศ เรียงจากมากไปน้อย
+export function customersByGender(customers) {
+  const byGender = new Map();
+  for (const c of customers) byGender.set(c.gender, (byGender.get(c.gender) || 0) + 1);
+  return [...byGender.entries()]
+    .map(([gender, count]) => ({ gender, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// จำนวนลูกค้าใหม่รายเดือน เรียงตามเดือน
+export function newCustomersByMonth(customers) {
+  const byMonth = new Map();
+  for (const c of customers) byMonth.set(c.joinMonth, (byMonth.get(c.joinMonth) || 0) + 1);
+  return [...byMonth.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([month, count]) => ({ month, count }));
+}
+
 // (การบ้าน) จำนวนบิลตามชั่วโมงของวัน (0-23) แยกตามสาขาด้วย
 // นับ order_id ที่ไม่ซ้ำต่อ 1 ชั่วโมง (บิลเดียวมีได้หลายแถว แต่เวลาเดียวกัน)
 export function ordersByHour(sales) {
