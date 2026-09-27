@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -11,9 +12,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { computeKpis, dailySales, parseSalesRows, salesByBranch } from './lib/metrics';
+import { computeKpis, dailySales, ordersByHour, parseSalesRows, salesByBranch } from './lib/metrics';
 
 const currency = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
+const branchColors = ['#aa3bff', '#f97316', '#0ea5e9', '#22c55e', '#e11d48'];
 
 function KpiCard({ label, value }) {
   return (
@@ -26,6 +28,7 @@ function KpiCard({ label, value }) {
 
 export default function App() {
   const [sales, setSales] = useState(null);
+  const [splitByBranch, setSplitByBranch] = useState(false);
 
   useEffect(() => {
     Papa.parse('/sales.csv', {
@@ -47,6 +50,7 @@ export default function App() {
   const kpis = computeKpis(sales);
   const daily = dailySales(sales);
   const byBranch = salesByBranch(sales);
+  const { data: hourly, branches } = ordersByHour(sales);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -84,6 +88,41 @@ export default function App() {
               <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12 }} />
               <Tooltip formatter={(v) => `฿${currency.format(v)}`} />
               <Bar dataKey="revenue" fill="#aa3bff" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">
+            จำนวนบิลตามชั่วโมงของวัน
+          </h2>
+          <button
+            type="button"
+            onClick={() => setSplitByBranch((v) => !v)}
+            className="mb-2 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            {splitByBranch ? 'ดูรวมทุกสาขา' : 'แยกตามสาขา'}
+          </button>
+        </div>
+        <div className="h-72 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={hourly}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="hour" tick={{ fontSize: 12 }} tickFormatter={(h) => `${h}:00`} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip labelFormatter={(h) => `เวลา ${h}:00`} />
+              {splitByBranch ? (
+                <>
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {branches.map((b, i) => (
+                    <Bar key={b} dataKey={b} stackId="hour" fill={branchColors[i % branchColors.length]} />
+                  ))}
+                </>
+              ) : (
+                <Bar dataKey="total" fill="#aa3bff" radius={[4, 4, 0, 0]} />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>

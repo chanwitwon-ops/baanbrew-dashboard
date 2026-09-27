@@ -1,16 +1,27 @@
-# React + Vite
+# บ้านบรู Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Lab 1: Basic Data Analytics & Visualization using AI Vibe Coding — RAISE Module 3
 
-Currently, two official plugins are available:
+React + Vite + Tailwind CSS v4 + Recharts + PapaParse dashboard for BaanBrew coffee shop sales data.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Getting started
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## What's in the dashboard
 
-## Expanding the Oxlint configuration
+- KPI cards: total revenue, order count, average order value, unique member customers
+- Daily revenue line chart
+- Branch revenue bar chart (sorted descending)
+- Homework: bills-by-hour-of-day bar chart, with a toggle to split by branch
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Calculation logic lives in [src/lib/metrics.js](src/lib/metrics.js).
+
+## Homework: observations from the "bills by hour of day" chart
+
+1. **The shop only operates roughly 07:00–20:00** — there are zero bills recorded outside this window across all five branches, consistent with normal coffee-shop hours.
+2. **Lunchtime (12:00) is the single busiest hour overall** (3,741 bills), with a secondary afternoon bump around 15:00 (3,249 bills) — likely an afternoon coffee-break rush.
+3. **The peak hour differs by branch type, matching each location's foot traffic:** office-area branches (สีลม, อารีย์) peak at 08:00 (commute-time coffee), mall branches (สยาม, บางนา) peak later at 16:00 (afternoon/evening shoppers), while the university branch (มหาวิทยาลัย) peaks at 12:00 (student lunch break).

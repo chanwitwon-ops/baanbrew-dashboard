@@ -10,6 +10,7 @@ export function parseSalesRows(rows) {
       // datetime เป็นเวลาไทยอยู่แล้ว (+07:00) เอา 10 ตัวแรกพอ ไม่ต้องแปลงเป็น UTC
       // (ถ้าใช้ new Date(...).toISOString() วันที่จะเลื่อนไป 1 วันได้)
       date: String(r.datetime).slice(0, 10),
+      hour: Number(String(r.datetime).slice(11, 13)),
     }));
 }
 
@@ -52,4 +53,25 @@ export function salesByBranch(sales) {
   return [...byBranch.entries()]
     .map(([branch, revenue]) => ({ branch, revenue }))
     .sort((a, b) => b.revenue - a.revenue);
+}
+
+// (การบ้าน) จำนวนบิลตามชั่วโมงของวัน (0-23) แยกตามสาขาด้วย
+// นับ order_id ที่ไม่ซ้ำต่อ 1 ชั่วโมง (บิลเดียวมีได้หลายแถว แต่เวลาเดียวกัน)
+export function ordersByHour(sales) {
+  const branches = [...new Set(sales.map((r) => r.branch))].sort();
+  const table = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    total: 0,
+    ...Object.fromEntries(branches.map((b) => [b, 0])),
+  }));
+
+  const seenOrders = new Set();
+  for (const r of sales) {
+    if (seenOrders.has(r.order_id)) continue;
+    seenOrders.add(r.order_id);
+    table[r.hour].total += 1;
+    table[r.hour][r.branch] += 1;
+  }
+
+  return { data: table, branches };
 }
