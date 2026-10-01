@@ -1,4 +1,4 @@
-customer_id,nickname,gender,age_group,home_branch_id,joined_date,phone
+﻿customer_id,nickname,gender,age_group,home_branch_id,joined_date,phone
 C00001,กมล,หญิง,18-24,B02,2026-03-03,082-xxx-6693
 C00002,กิตติ,ชาย,25-34,B04,2026-01-18,084-xxx-3734
 C00003,ปิยะ,หญิง,18-24,B04,2025-05-04,089-xxx-9286
