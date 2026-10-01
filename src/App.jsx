@@ -45,7 +45,7 @@ export default function App() {
 
   if (!sales || !customers) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-coffee-500">
+      <div className="flex min-h-screen items-center justify-center text-matcha-500">
         กำลังโหลดข้อมูล...
       </div>
     );
@@ -67,11 +67,11 @@ export default function App() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight text-coffee-800 dark:text-coffee-100">
-          ☕ บ้านบรู Dashboard
+        <h1 className="text-3xl font-semibold tracking-tight text-matcha-800 dark:text-matcha-100">
+          🍵 บ้านบรู Dashboard
         </h1>
         {rangeStart && rangeEnd && (
-          <p className="text-sm text-coffee-500 dark:text-coffee-400">
+          <p className="text-sm text-matcha-500 dark:text-matcha-400">
             {thaiFullDate(rangeStart)} ถึง {thaiFullDate(rangeEnd)}
           </p>
         )}

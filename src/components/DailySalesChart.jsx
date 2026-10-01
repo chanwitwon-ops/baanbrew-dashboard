@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import { CARD, currency, SECTION_TITLE, thaiShortDate } from './shared';
 
-const MA7_COLOR = '#e2482a';
+const MA7_COLOR = '#b5451b';
 const DAILY_COLOR = '#6b7280';
 
 function DailyTooltip({ active, payload, label }) {
@@ -19,15 +19,15 @@ function DailyTooltip({ active, payload, label }) {
   const daily = payload.find((p) => p.dataKey === 'revenue');
 
   return (
-    <div className="rounded-lg border border-coffee-200 bg-white p-2 text-sm shadow dark:border-coffee-700 dark:bg-coffee-900">
-      <p className="mb-1 font-medium text-coffee-900 dark:text-coffee-100">{thaiShortDate(label)}</p>
+    <div className="rounded-lg border border-matcha-200 bg-white p-2 text-sm shadow dark:border-matcha-700 dark:bg-matcha-900">
+      <p className="mb-1 font-medium text-matcha-900 dark:text-matcha-100">{thaiShortDate(label)}</p>
       {ma7 && ma7.value != null && (
         <p className="font-semibold" style={{ color: MA7_COLOR }}>
           เฉลี่ย 7 วัน: ฿{currency.format(ma7.value)}
         </p>
       )}
       {daily && (
-        <p className="text-coffee-500 dark:text-coffee-400">ยอดวันนั้น: ฿{currency.format(daily.value)}</p>
+        <p className="text-matcha-500 dark:text-matcha-400">ยอดวันนั้น: ฿{currency.format(daily.value)}</p>
       )}
     </div>
   );
@@ -40,14 +40,14 @@ export default function DailySalesChart({ daily }) {
       <div className={`h-72 ${CARD}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={daily}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#ead2b3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-matcha-200)" />
             <XAxis
               dataKey="date"
               tickFormatter={thaiShortDate}
-              tick={{ fontSize: 12, fill: '#7c4a26' }}
+              tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }}
               minTickGap={40}
             />
-            <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12, fill: '#7c4a26' }} />
+            <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }} />
             <Tooltip content={<DailyTooltip />} />
             <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12 }} />
             <Line

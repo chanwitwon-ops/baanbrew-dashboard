@@ -12,7 +12,7 @@ export default function HourlyOrdersChart({ hourly, branches }) {
         <button
           type="button"
           onClick={() => setSplitByBranch((v) => !v)}
-          className="mb-2 rounded-lg border border-coffee-300 px-3 py-1 text-sm text-coffee-700 hover:bg-coffee-100 dark:border-coffee-600 dark:text-coffee-200 dark:hover:bg-coffee-800"
+          className="mb-2 rounded-lg border border-matcha-300 px-3 py-1 text-sm text-matcha-700 hover:bg-matcha-100 dark:border-matcha-600 dark:text-matcha-200 dark:hover:bg-matcha-800"
         >
           {splitByBranch ? 'ดูรวมทุกสาขา' : 'แยกตามสาขา'}
         </button>
@@ -20,9 +20,9 @@ export default function HourlyOrdersChart({ hourly, branches }) {
       <div className={`h-72 ${CARD}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={hourly}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#ead2b3" />
-            <XAxis dataKey="hour" tick={{ fontSize: 12, fill: '#7c4a26' }} tickFormatter={(h) => `${h}:00`} />
-            <YAxis tick={{ fontSize: 12, fill: '#7c4a26' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-matcha-200)" />
+            <XAxis dataKey="hour" tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }} tickFormatter={(h) => `${h}:00`} />
+            <YAxis tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }} />
             <Tooltip labelFormatter={(h) => `เวลา ${h}:00`} />
             {splitByBranch ? (
               <>

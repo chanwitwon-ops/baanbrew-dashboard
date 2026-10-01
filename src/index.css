@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-coffee-50: #fbf6ef;
-  --color-coffee-100: #f5ead9;
-  --color-coffee-200: #ead2b3;
-  --color-coffee-300: #ddb383;
-  --color-coffee-400: #cc9257;
-  --color-coffee-500: #ba7638;
-  --color-coffee-600: #9c5f2d;
-  --color-coffee-700: #7c4a26;
-  --color-coffee-800: #573521;
-  --color-coffee-900: #2e2118;
-  --color-coffee-950: #1b140f;
+  --color-matcha-50: #f4f7ea;
+  --color-matcha-100: #e6edd0;
+  --color-matcha-200: #cddfa4;
+  --color-matcha-300: #adc975;
+  --color-matcha-400: #8bb04e;
+  --color-matcha-500: #6f9637;
+  --color-matcha-600: #577b2b;
+  --color-matcha-700: #446122;
+  --color-matcha-800: #32491a;
+  --color-matcha-900: #223212;
+  --color-matcha-950: #141f0a;
 
-  --color-cream-50: #fffdfa;
-  --color-cream-100: #fbf6ef;
+  --color-cream-50: #fcfdf7;
+  --color-cream-100: #f4f7ea;
 }
 
 body {
@@ -23,6 +23,6 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: var(--color-coffee-950);
+    background-color: var(--color-matcha-950);
   }
 }

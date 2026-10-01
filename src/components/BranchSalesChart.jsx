@@ -8,9 +8,9 @@ export default function BranchSalesChart({ byBranch }) {
       <div className={`h-72 ${CARD}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={byBranch}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#ead2b3" />
-            <XAxis dataKey="branch" tick={{ fontSize: 12, fill: '#7c4a26' }} />
-            <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12, fill: '#7c4a26' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-matcha-200)" />
+            <XAxis dataKey="branch" tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }} />
+            <YAxis tickFormatter={(v) => currency.format(v)} tick={{ fontSize: 12, fill: 'var(--color-matcha-700)' }} />
             <Tooltip formatter={(v) => `฿${currency.format(v)}`} />
             <Bar dataKey="revenue" fill={ACCENT} radius={[4, 4, 0, 0]} />
           </BarChart>

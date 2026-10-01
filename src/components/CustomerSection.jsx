@@ -4,7 +4,7 @@ import { ACCENT, CARD, currency, KpiCard, SECTION_TITLE } from './shared';
 export default function CustomerSection({ custKpis, newByMonth, byAgeGroup, byGender }) {
   return (
     <>
-      <h2 className="mt-12 text-2xl font-semibold tracking-tight text-coffee-800 dark:text-coffee-100">
+      <h2 className="mt-12 text-2xl font-semibold tracking-tight text-matcha-800 dark:text-matcha-100">
         ข้อมูลลูกค้า
       </h2>
 
