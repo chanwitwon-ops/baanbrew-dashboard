@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import BranchSalesChart from './components/BranchSalesChart';
 import CustomerSection from './components/CustomerSection';
 import DailySalesChart from './components/DailySalesChart';
+import FiltersBar from './components/FiltersBar';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
 import { ChartIcon, TabButton, thaiFullDate, UsersIcon } from './components/shared';
@@ -33,6 +34,9 @@ export default function App() {
   const [sales, setSales] = useState(null);
   const [customers, setCustomers] = useState(null);
   const [tab, setTab] = useState('sales');
+  const [branch, setBranch] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL;
@@ -52,10 +56,21 @@ export default function App() {
     );
   }
 
-  const kpis = computeKpis(sales);
-  const daily = dailySales(sales);
-  const byBranch = salesByBranch(sales);
-  const { data: hourly, branches } = ordersByHour(sales);
+  const allDates = sales.map((r) => r.date);
+  const minDate = allDates.reduce((min, d) => (d < min ? d : min), allDates[0]);
+  const maxDate = allDates.reduce((max, d) => (d > max ? d : max), allDates[0]);
+  const effectiveStart = startDate || minDate;
+  const effectiveEnd = endDate || maxDate;
+  const branchOptions = [...new Set(sales.map((r) => r.branch))].sort();
+
+  const filteredSales = sales.filter(
+    (r) => r.date >= effectiveStart && r.date <= effectiveEnd && (branch === 'all' || r.branch === branch)
+  );
+
+  const kpis = computeKpis(filteredSales);
+  const daily = dailySales(filteredSales);
+  const byBranch = salesByBranch(filteredSales);
+  const { data: hourly, branches } = ordersByHour(filteredSales);
 
   const custKpis = customerKpis(customers);
   const byAgeGroup = customersByAgeGroup(customers);
@@ -89,6 +104,22 @@ export default function App() {
 
       {tab === 'sales' && (
         <>
+          <FiltersBar
+            branches={branchOptions}
+            branch={branch}
+            onBranchChange={setBranch}
+            startDate={effectiveStart}
+            endDate={effectiveEnd}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            minDate={minDate}
+            maxDate={maxDate}
+            onReset={() => {
+              setBranch('all');
+              setStartDate('');
+              setEndDate('');
+            }}
+          />
           <KpiCards kpis={kpis} />
           <DailySalesChart daily={daily} />
           <BranchSalesChart byBranch={byBranch} />
