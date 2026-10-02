@@ -15,6 +15,15 @@
 
   --color-cream-50: #fcfdf7;
   --color-cream-100: #f4f7ea;
+
+  --color-ink-800: #2a2a28;
+  --color-ink-900: #1c1c1b;
+  --color-ink-950: #121211;
+}
+
+:root {
+  --chart-grid: var(--color-matcha-200);
+  --chart-axis: var(--color-matcha-700);
 }
 
 body {
@@ -23,6 +32,11 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: var(--color-matcha-950);
+    background-color: var(--color-ink-950);
+  }
+
+  :root {
+    --chart-grid: #3f3f3d;
+    --chart-axis: #a8a89f;
   }
 }

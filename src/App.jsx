@@ -5,7 +5,7 @@ import CustomerSection from './components/CustomerSection';
 import DailySalesChart from './components/DailySalesChart';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
-import { thaiFullDate } from './components/shared';
+import { ChartIcon, TabButton, thaiFullDate, UsersIcon } from './components/shared';
 import {
   computeKpis,
   customerKpis,
@@ -32,6 +32,7 @@ const loadCsv = (url) =>
 export default function App() {
   const [sales, setSales] = useState(null);
   const [customers, setCustomers] = useState(null);
+  const [tab, setTab] = useState('sales');
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL;
@@ -77,11 +78,27 @@ export default function App() {
         )}
       </div>
 
-      <KpiCards kpis={kpis} />
-      <DailySalesChart daily={daily} />
-      <BranchSalesChart byBranch={byBranch} />
-      <HourlyOrdersChart hourly={hourly} branches={branches} />
-      <CustomerSection custKpis={custKpis} newByMonth={newByMonth} byAgeGroup={byAgeGroup} byGender={byGender} />
+      <div className="mt-6 flex w-fit gap-1 rounded-lg bg-matcha-100 p-1 dark:bg-ink-900">
+        <TabButton active={tab === 'sales'} onClick={() => setTab('sales')} icon={<ChartIcon />}>
+          ยอดขาย
+        </TabButton>
+        <TabButton active={tab === 'customers'} onClick={() => setTab('customers')} icon={<UsersIcon />}>
+          ข้อมูลลูกค้า
+        </TabButton>
+      </div>
+
+      {tab === 'sales' && (
+        <>
+          <KpiCards kpis={kpis} />
+          <DailySalesChart daily={daily} />
+          <BranchSalesChart byBranch={byBranch} />
+          <HourlyOrdersChart hourly={hourly} branches={branches} />
+        </>
+      )}
+
+      {tab === 'customers' && (
+        <CustomerSection custKpis={custKpis} newByMonth={newByMonth} byAgeGroup={byAgeGroup} byGender={byGender} />
+      )}
     </div>
   );
 }

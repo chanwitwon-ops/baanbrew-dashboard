@@ -4,11 +4,7 @@ import { ACCENT, CARD, currency, KpiCard, SECTION_TITLE } from './shared';
 export default function CustomerSection({ custKpis, newByMonth, byAgeGroup, byGender }) {
   return (
     <>
-      <h2 className="mt-12 text-2xl font-semibold tracking-tight text-matcha-800 dark:text-matcha-100">
-        ข้อมูลลูกค้า
-      </h2>
-
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-4">
         <KpiCard label="ลูกค้าทั้งหมด" value={currency.format(custKpis.total)} />
         <KpiCard
           label={`ลูกค้าใหม่เดือนล่าสุด (${custKpis.latestMonth})`}
