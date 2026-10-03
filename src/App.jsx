@@ -35,6 +35,7 @@ export default function App() {
   const [sales, setSales] = useState(null);
   const [customers, setCustomers] = useState(null);
   const [products, setProducts] = useState(null);
+  const [cleanSales, setCleanSales] = useState(null);
   const [tab, setTab] = useState(() => (location.hash === '#lab2' ? 'lab2' : 'sales'));
   const [branch, setBranch] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -52,6 +53,12 @@ export default function App() {
       setProducts(productRows);
     });
   }, []);
+
+  // Lab 2.2 ใช้ข้อมูลที่ทำความสะอาดแล้วจาก Lab 2.1 โหลดเมื่อเปิดแท็บนี้เท่านั้น
+  useEffect(() => {
+    if (tab !== 'lab2' || cleanSales) return;
+    loadCsv(`${import.meta.env.BASE_URL}sales_clean.csv`).then((rows) => setCleanSales(parseSalesRows(rows)));
+  }, [tab, cleanSales]);
 
   const chooseTab = (id) => {
     setTab(id);
@@ -146,7 +153,15 @@ export default function App() {
 
       {tab === 'lab2' && (
         <div className="mt-6">
-          <Lab2Page rows={sales} products={products} />
+          <p className="mb-4 rounded-lg bg-matcha-100 px-4 py-2 text-sm text-matcha-800">
+            แท็บนี้ใช้ข้อมูลที่ทำความสะอาดแล้วจาก Lab 2.1 (sales_clean.csv · ตัดบิลยกเลิกและแถวที่ไม่มีรหัสสินค้า 35 แถว)
+            ตัวเลขจึงต่างจากแท็บ "ยอดขาย" ซึ่งใช้ข้อมูลของ Lab 1 เล็กน้อย
+          </p>
+          {cleanSales ? (
+            <Lab2Page rows={cleanSales} products={products} />
+          ) : (
+            <p className="text-matcha-500">กำลังโหลดข้อมูลที่ทำความสะอาดแล้ว...</p>
+          )}
         </div>
       )}
     </div>
