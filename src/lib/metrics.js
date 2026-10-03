@@ -144,3 +144,12 @@ export function ordersByHour(sales) {
 
   return { data: table, branches };
 }
+
+// ยอดขายรวมรายวัน เรียงตามวันที่ (ไม่เติมวันที่ว่าง) ใช้กับ Lab 2.2
+export function dailyRevenue(rows) {
+  const map = new Map();
+  for (const r of rows) map.set(r.date, (map.get(r.date) ?? 0) + r.revenue);
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, revenue]) => ({ date, revenue }));
+}
