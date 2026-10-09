@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// Lab 3.3 · Security Rules ของ BaanBrew
+// หลักการ: ต้องล็อกอินก่อนทุกอย่าง · products/branches อ่านอย่างเดียว · sales สร้างได้อย่างเดียว (แก้/ลบไม่ได้)
+// และเอกสารที่สร้างต้องตรงกับที่ buildSale() ใน src/lab3/saleModel.js สร้างทุกประการ
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ต้องล็อกอิน (มี request.auth) จึงจะอ่านได้
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // ตรวจเอกสารยอดขายที่กำลังจะสร้าง
+    function validSale(data) {
+      return
+        // ฟิลด์ครบ 15 ตัว (รวม created_at) และไม่มีฟิลด์เกิน เช่น discount
+        data.keys().hasAll(['order_id', 'datetime', 'date', 'hour', 'branch', 'product_id', 'qty',
+                            'unit_price', 'revenue', 'customer_id', 'payment_method', 'channel',
+                            'source', 'created_by', 'created_at'])
+        && data.keys().hasOnly(['order_id', 'datetime', 'date', 'hour', 'branch', 'product_id', 'qty',
+                                'unit_price', 'revenue', 'customer_id', 'payment_method', 'channel',
+                                'source', 'created_by', 'created_at'])
+        // บันทึกจากเว็บเท่านั้น และ created_by ต้องเป็น uid ของคนที่ล็อกอิน (ปลอมเป็นคนอื่นไม่ได้)
+        && data.source == 'web'
+        && data.created_by == request.auth.uid
+        // created_at ต้องเป็นเวลาของเซิร์ฟเวอร์ (serverTimestamp) ห้ามใส่เวลาเอง
+        && data.created_at == request.time
+        // สาขาต้องเป็น 1 ใน 5 สาขา
+        && data.branch in ['สยาม', 'สีลม', 'อารีย์', 'บางนา', 'มหาวิทยาลัย']
+        // วิธีชำระเงินต้องเป็น 1 ใน 5 แบบ
+        && data.payment_method in ['QR พร้อมเพย์', 'บัตรเครดิต', 'เงินสด', 'LINE MAN', 'Grab']
+        // channel ต้องเป็นค่าที่ระบบมี
+        && data.channel in ['หน้าร้าน', 'เดลิเวอรี']
+        // จำนวนเป็นจำนวนเต็ม 1–20
+        && data.qty is int && data.qty >= 1 && data.qty <= 20
+        // ชั่วโมงเป็นจำนวนเต็ม 0–23
+        && data.hour is int && data.hour >= 0 && data.hour <= 23
+        // ราคาต่อหน่วยต้องตรงกับราคาในเมนูจริง (แก้ราคาเองไม่ได้)
+        && data.product_id is string
+        && exists(/databases/$(database)/documents/products/$(data.product_id))
+        && data.unit_price == get(/databases/$(database)/documents/products/$(data.product_id)).data.price
+        // ยอดรวม = จำนวน × ราคา
+        && data.revenue == data.qty * data.unit_price
+        // date เป็น YYYY-MM-DD และ datetime เป็น YYYY-MM-DDTHH:MM:SS+07:00
+        && data.date is string && data.date.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
+        && data.datetime is string && data.datetime.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+07:00$')
+        // รหัสสมาชิกเป็น null (ลูกค้าทั่วไป) หรือ C ตามด้วยเลข 5 หลัก
+        && (data.customer_id == null
+            || (data.customer_id is string && data.customer_id.matches('^C[0-9]{5}$')));
+    }
+
+    // เมนูและสาขา: อ่านได้เมื่อล็อกอิน เขียนไม่ได้ (นำเข้าด้วย Admin SDK ใน seed script ซึ่งข้าม rules)
+    match /products/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /branches/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ยอดขาย: อ่านได้เมื่อล็อกอิน สร้างได้เมื่อข้อมูลถูกต้อง แก้ไข/ลบไม่ได้
+    match /sales/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validSale(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // ที่เหลือปิดหมด
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

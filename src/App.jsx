@@ -7,6 +7,10 @@ import FiltersBar from './components/FiltersBar';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
 import Lab2Page from './lab2/Lab2Page';
+import { isConfigured } from './lab3/firebase.js';
+import LiveTab from './lab3/LiveTab.jsx';
+import RulesTester from './lab3/RulesTester.jsx';
+import SetupGuide from './lab3/SetupGuide.jsx';
 import { ChartIcon, TabButton, thaiFullDate, UsersIcon } from './components/shared';
 import {
   computeKpis,
@@ -36,7 +40,8 @@ export default function App() {
   const [customers, setCustomers] = useState(null);
   const [products, setProducts] = useState(null);
   const [cleanSales, setCleanSales] = useState(null);
-  const [tab, setTab] = useState(() => (location.hash === '#lab2' ? 'lab2' : 'sales'));
+  const TAB_IDS = ['lab2', 'live', 'rules'];
+  const [tab, setTab] = useState(() => TAB_IDS.find((id) => location.hash === `#${id}`) ?? 'sales');
   const [branch, setBranch] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -62,7 +67,7 @@ export default function App() {
 
   const chooseTab = (id) => {
     setTab(id);
-    history.replaceState(null, '', id === 'lab2' ? '#lab2' : '#');
+    history.replaceState(null, '', TAB_IDS.includes(id) ? `#${id}` : '#');
   };
 
   if (!sales || !customers || !products) {
@@ -110,7 +115,7 @@ export default function App() {
         )}
       </div>
 
-      <div className="mt-6 flex w-fit gap-1 rounded-lg bg-matcha-100 p-1 dark:bg-ink-900">
+      <div className="mt-6 flex w-fit max-w-full flex-wrap gap-1 rounded-lg bg-matcha-100 p-1 dark:bg-ink-900">
         <TabButton active={tab === 'sales'} onClick={() => chooseTab('sales')} icon={<ChartIcon />}>
           ยอดขาย
         </TabButton>
@@ -119,6 +124,12 @@ export default function App() {
         </TabButton>
         <TabButton active={tab === 'lab2'} onClick={() => chooseTab('lab2')} icon={<ChartIcon />}>
           Lab 2.2 · ซ่อมกราฟ
+        </TabButton>
+        <TabButton active={tab === 'live'} onClick={() => chooseTab('live')} icon={<ChartIcon />}>
+          สด · Firestore
+        </TabButton>
+        <TabButton active={tab === 'rules'} onClick={() => chooseTab('rules')} icon={<ChartIcon />}>
+          ทดสอบ Rules
         </TabButton>
       </div>
 
@@ -150,6 +161,10 @@ export default function App() {
       {tab === 'customers' && (
         <CustomerSection custKpis={custKpis} newByMonth={newByMonth} byAgeGroup={byAgeGroup} byGender={byGender} />
       )}
+
+      {tab === 'live' && (isConfigured ? <LiveTab /> : <SetupGuide />)}
+
+      {tab === 'rules' && <div className="mt-6">{isConfigured ? <RulesTester /> : <SetupGuide />}</div>}
 
       {tab === 'lab2' && (
         <div className="mt-6">
