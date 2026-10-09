@@ -44,7 +44,7 @@ service cloud.firestore {
         && data.revenue == data.qty * data.unit_price
         // date เป็น YYYY-MM-DD และ datetime เป็น YYYY-MM-DDTHH:MM:SS+07:00
         && data.date is string && data.date.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
-        && data.datetime is string && data.datetime.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+07:00$')
+        && data.datetime is string && data.datetime.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+]07:00$')
         // รหัสสมาชิกเป็น null (ลูกค้าทั่วไป) หรือ C ตามด้วยเลข 5 หลัก
         && (data.customer_id == null
             || (data.customer_id is string && data.customer_id.matches('^C[0-9]{5}$')));
