@@ -195,6 +195,63 @@ function SegmentList({ rfm, picked, onClose }) {
   );
 }
 
+// ---------------- เพิ่มเติม · ยอดซื้อรวมเฉลี่ยต่อคน แยกกลุ่ม (ไม่ใช่ส่วนของโจทย์) ----------------
+// M = ยอดซื้อรวมตลอดประวัติของลูกค้า 1 คน ไม่ใช่ยอดต่อบิล จึงเฉลี่ยต่อคนในกลุ่มได้ตรง ๆ
+function AvgSpendCard({ rfm }) {
+  if (rfm.error) return null;
+  const data = SEGMENTS.map(({ id, th }) => {
+    const mine = rfm.customers.filter((c) => c.segment === id);
+    const n = mine.length || 1;
+    const spend = mine.reduce((a, c) => a + c.M, 0);
+    const bills = mine.reduce((a, c) => a + c.F, 0);
+    return { segment: id, label: th, customers: mine.length, avgSpend: spend / n, avgBills: bills / n, avgPerBill: bills ? spend / bills : 0 };
+  });
+  const best = data.reduce((a, b) => (b.avgSpend > a.avgSpend ? b : a));
+  const all = rfm.customers;
+  const overall = all.reduce((a, c) => a + c.M, 0) / (all.length || 1);
+  return (
+    <Card title="ยอดซื้อรวมเฉลี่ยต่อคน แยกกลุ่ม" sub="ลูกค้า 1 คนซื้อกับร้านรวมทั้งหมดกี่บาทตลอดประวัติ (ไม่ใช่ยอดต่อบิล) · ค่าเฉลี่ยทุกกลุ่ม">
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 56 }}>
+            <CartesianGrid horizontal={false} stroke="#eee" />
+            <XAxis type="number" tickFormatter={(v) => fmtBaht(v)} tick={{ fontSize: 12 }} />
+            <YAxis type="category" dataKey="label" width={96} tick={{ fontSize: 13 }} />
+            <Tooltip cursor={{ fill: "#f5f5f4" }}
+                     formatter={(v) => [fmtBaht(v), "ยอดซื้อรวมเฉลี่ยต่อคน"]}
+                     labelFormatter={(l, p) => { const d = p?.[0]?.payload; return d ? `${l} · ${d.customers.toLocaleString()} คน · มาซื้อเฉลี่ย ${d.avgBills.toFixed(1)} บิล` : l; }} />
+            <ReferenceLine x={overall} stroke={MUTED} strokeDasharray="4 4" label={{ value: "เฉลี่ยทุกคน", position: "top", fontSize: 11, fill: INK }} />
+            <Bar dataKey="avgSpend" fill={MAIN} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+              <LabelList dataKey="avgSpend" position="right" formatter={(v) => fmtBaht(v)} style={{ fontSize: 12, fill: INK }} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm tabular-nums">
+          <thead className="text-left text-stone-500"><tr><th className="py-1 font-medium">กลุ่ม</th><th className="text-right font-medium">ลูกค้า (คน)</th><th className="text-right font-medium">มาซื้อเฉลี่ย (บิล)</th><th className="text-right font-medium">ยอดซื้อรวมต่อคน</th><th className="text-right font-medium">ยอดเฉลี่ยต่อบิล</th></tr></thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.segment} className="border-t border-stone-100">
+                <td className="py-1.5">{d.label}</td>
+                <td className="text-right">{d.customers.toLocaleString()}</td>
+                <td className="text-right">{d.avgBills.toFixed(1)}</td>
+                <td className="text-right">{fmtBaht(d.avgSpend)}</td>
+                <td className="text-right">{fmtBaht(d.avgPerBill)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Insight>
+        {best.label} ซื้อรวมเฉลี่ย {fmtBaht(best.avgSpend)} ต่อคน สูงกว่าค่าเฉลี่ยทุกคน ({fmtBaht(overall)}) {(best.avgSpend / overall).toFixed(1)} เท่า ·
+        ยอดต่อบิลของทุกกลุ่มใกล้กัน ({fmtBaht(Math.min(...data.map((d) => d.avgPerBill)))}–{fmtBaht(Math.max(...data.map((d) => d.avgPerBill)))}) ความต่างอยู่ที่ "มาซื้อกี่ครั้ง" ·
+        กลุ่ม "เสี่ยงหาย" ซื้อรวมสูงเช่นกัน แต่ไม่ได้มานานแล้ว จึงเป็นกลุ่มที่ควรดึงกลับก่อน
+      </Insight>
+    </Card>
+  );
+}
+
 export default function CustomersTab({ source }) {
   const state = useAnalytics(source);
   const [picked, setPicked] = useState(null);
@@ -206,6 +263,7 @@ export default function CustomersTab({ source }) {
           {picked && !d.rfm.error && <SegmentList rfm={d.rfm} picked={picked} onClose={() => setPicked(null)} />}
           <CohortCard cohort={d.cohort} />
           <AbcCard abc={d.abc} />
+          <AvgSpendCard rfm={d.rfm} />
         </div>
       )}
     </AnalyticsShell>
