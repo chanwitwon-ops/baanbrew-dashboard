@@ -9,6 +9,7 @@ import { db, auth, googleProvider } from "./firebase.js";
 import { selectLastDays, computeShift, toSaleDoc } from "../../scripts/seedTransform.mjs";
 import { todayBangkok } from "./time.js";
 import { buildDemoAnalytics } from "../lab4/demoAnalytics.js";
+import { menuByBranch } from "../lib/analytics/menuBranch.js";
 
 const ANALYTICS_DOCS = ["meta", "daily", "rfm", "cohort", "abc"];
 
@@ -56,6 +57,13 @@ export const firestoreSource = {
     out.meta = { ...out.meta, builtAt: built ? built.toISOString() : null };
     return out;
   },
+
+  /** เสริมนอกโจทย์ · ยอดเมนูแยกสาขา (เอกสาร analytics/menuBranch) อ่านแยก เฉพาะตอนเปิดแท็บ กราฟพิเศษ */
+  async loadMenuBranch() {
+    const s = await getDoc(doc(db, "analytics", "menuBranch"));
+    if (!s.exists()) throw new Error("ยังไม่มีข้อมูลเมนูรายสาขา รัน npm run analytics ก่อน");
+    return s.data();
+  },
 };
 
 // ---------------- โหมดสาธิต ----------------
@@ -82,6 +90,7 @@ export function createDemoSource(csvRows, productRows, holidays = {}) {
     signIn: async () => { signedIn = true; authCb?.(user); },
     signOut: async () => { signedIn = false; authCb?.(null); },
     loadAnalytics: async () => buildDemoAnalytics(csvRows, productRows, holidays),
+    loadMenuBranch: async () => ({ rows: menuByBranch(csvRows) }),
     loadProducts: async () => productRows.map((p) => ({ ...p, price: Number(p.price), cost: Number(p.cost) })),
     subscribeSales({ start, end }, onData) {
       const l = { start, end, onData };

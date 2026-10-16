@@ -252,9 +252,9 @@ function AvgSpendCard({ rfm }) {
   );
 }
 
-// ---------------- เพิ่มเติม · เมนูไหนทำเงินให้ร้านเท่าไร แบ่ง 4 กลุ่ม ----------------
-// กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · ขายดี/ขายน้อย แบ่งที่ค่ากลางของจำนวนชิ้นที่ขายได้ · กำไรมาก/น้อย แบ่งที่ค่ากลางของกำไรต่อชิ้น
-// ยอดขายต่อเมนูมาจาก analytics/abc · ราคาและต้นทุนจากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
+// ---------------- เพิ่มเติม · เมนูไหนทำเงินให้ร้านเท่าไร แบ่ง 4 กลุ่ม (เลือกดูรายสาขาได้) ----------------
+// กำไรรวม = ยอดขาย − (จำนวนที่ขายได้ × ต้นทุน) · ขายดี/ขายน้อย แบ่งที่ค่ากลางของจำนวนชิ้นที่ขายได้ · กำไรมาก/น้อย แบ่งที่ค่ากลางของกำไรต่อชิ้น
+// ยอดขายต่อเมนูต่อสาขามาจาก analytics/menuBranch · ต้นทุนจากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
 const median = (xs) => { const a = [...xs].sort((x, y) => x - y); const n = a.length; return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; };
 const GROUPS = [
   { id: "star", th: "ทำเงินได้ดี", how: "ขายดี · กำไรต่อชิ้นมาก", advice: "เมนูหลักของร้าน รักษาคุณภาพและของไม่ให้ขาด", color: "#2F7D5B" },
@@ -262,20 +262,29 @@ const GROUPS = [
   { id: "promote", th: "ควรแนะนำเพิ่ม", how: "ขายน้อย · กำไรต่อชิ้นมาก", advice: "ขายได้แต่ละชิ้นกำไรดี ลองดันเป็นเมนูแนะนำ จัดเซ็ตหรือโปรโมต", color: "#d97706" },
   { id: "review", th: "ควรพิจารณา", how: "ขายน้อย · กำไรต่อชิ้นน้อย", advice: "ทำเงินให้ร้านน้อย ลองทบทวนบทบาท เช่น เมนูเสริมคู่เมนูหลัก หรือปรับปรุง/เลิกขาย", color: "#a8a29e" },
 ];
-function MenuProfitCard({ abc, source }) {
+function MenuProfitCard({ source }) {
   const [products, setProducts] = useState(null);
+  const [mb, setMb] = useState(null);
   const [err, setErr] = useState(null);
-  useEffect(() => { source.loadProducts().then(setProducts).catch((e) => setErr(e.message)); }, [source]);
-  if (abc.error) return null;
+  const [branch, setBranch] = useState(null); // null = รวมทุกสาขา
+  useEffect(() => {
+    Promise.all([source.loadProducts(), source.loadMenuBranch()]).then(([p, m]) => { setProducts(p); setMb(m); }).catch((e) => setErr(e.message));
+  }, [source]);
   const title = "เมนูไหนทำเงินให้ร้านเท่าไร";
-  if (err) return <Card title={title}><Pending lab="ข้อมูลต้นทุน" error={err} /></Card>;
-  if (!products) return <Card title={title}><p className="text-stone-500">กำลังโหลดต้นทุนเมนู…</p></Card>;
-  const cost = Object.fromEntries(products.map((p) => [p.product_id, p]));
-  const base = abc.items.filter((i) => cost[i.product_id]).map((i) => {
-    const p = cost[i.product_id];
-    const unitProfit = p.price - p.cost;
-    const qty = Math.round(i.revenue / p.price);
-    return { ...i, qty, unitProfit, profit: qty * unitProfit };
+  if (err) return <Card title={title}><Pending lab="ข้อมูลเมนูรายสาขา" error={err} /></Card>;
+  if (!products || !mb) return <Card title={title}><p className="text-stone-500">กำลังโหลดข้อมูลเมนู…</p></Card>;
+  const info = Object.fromEntries(products.map((p) => [p.product_id, p]));
+  const branches = [...new Set(mb.rows.map((r) => r.branch))].sort();
+  const sum = new Map();
+  for (const r of mb.rows) {
+    if (branch && r.branch !== branch) continue;
+    const c = sum.get(r.product_id) ?? { qty: 0, revenue: 0 };
+    c.qty += r.qty; c.revenue += r.revenue;
+    sum.set(r.product_id, c);
+  }
+  const base = [...sum].filter(([id, c]) => info[id] && c.qty > 0).map(([id, c]) => {
+    const profit = c.revenue - c.qty * info[id].cost;
+    return { product_id: id, name: info[id].product_name, qty: c.qty, profit, unitProfit: profit / c.qty };
   });
   const total = base.reduce((a, i) => a + i.profit, 0);
   const qtyCut = median(base.map((i) => i.qty));
@@ -285,7 +294,16 @@ function MenuProfitCard({ abc, source }) {
     group: i.qty >= qtyCut ? (i.unitProfit >= unitCut ? "star" : "volume") : (i.unitProfit >= unitCut ? "promote" : "review"),
   })).sort((a, b) => b.profit - a.profit);
   return (
-    <Card title={title} sub={`กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · เมนูที่ทำเงินได้ใกล้กันถือว่าดีพอกัน ไม่ว่าจะขายเยอะกำไรบาง หรือขายน้อยกำไรหนา · เส้นแบ่ง: ขายได้ ${Math.round(qtyCut).toLocaleString()} ชิ้น, กำไร ${fmtBaht(unitCut)}/ชิ้น (ค่ากลางของทุกเมนู)`}>
+    <Card title={title}
+          sub={`กำไรรวม = ยอดขาย − (จำนวนที่ขายได้ × ต้นทุน) · เมนูที่ทำเงินได้ใกล้กันถือว่าดีพอกัน ไม่ว่าจะขายเยอะกำไรบาง หรือขายน้อยกำไรหนา · เส้นแบ่งของ${branch ? `สาขา${branch}` : "ทุกสาขา"}: ขายได้ ${Math.round(qtyCut).toLocaleString()} ชิ้น, กำไร ${fmtBaht(unitCut)}/ชิ้น (ค่ากลางของทุกเมนู)`}
+          right={<div className="flex flex-wrap gap-1.5">
+            {[null, ...branches].map((b) => (
+              <button key={b ?? "all"} onClick={() => setBranch(b)}
+                      className={`rounded-full px-3 py-1 text-sm ring-1 ring-stone-300 ${branch === b ? "bg-stone-900 text-white ring-stone-900" : "hover:bg-stone-50"}`}>
+                {b ?? "รวม"}
+              </button>
+            ))}
+          </div>}>
       <div className="grid gap-3 md:grid-cols-2">
         {GROUPS.map((g) => {
           const mine = rows.filter((r) => r.group === g.id);
@@ -297,7 +315,7 @@ function MenuProfitCard({ abc, source }) {
                 <div className="text-xs text-stone-500">{g.how}</div>
               </div>
               <div className="mt-1 text-sm tabular-nums">
-                <b>{mine.length}</b> เมนู · กำไรรวม <b>{fmtBaht(gp)}</b> <span className="text-stone-500">({pct(gp / total)} ของกำไรร้าน)</span>
+                <b>{mine.length}</b> เมนู · กำไรรวม <b>{fmtBaht(gp)}</b> <span className="text-stone-500">({pct(gp / total)} ของกำไร{branch ? `สาขา${branch}` : "ร้าน"})</span>
               </div>
               <p className="mt-1 text-xs text-stone-600">{g.advice}</p>
               <ul className="mt-2 space-y-0.5 text-sm tabular-nums">
@@ -315,7 +333,7 @@ function MenuProfitCard({ abc, source }) {
       </div>
       <Insight>
         กลุ่ม "ทำเงินได้ดีจากปริมาณ" กำไรต่อชิ้นน้อยแต่ขายเยอะ ยังทำเงินให้ร้านได้ใกล้เคียงกลุ่มที่กำไรต่อชิ้นมาก ดูตัวเลข "กำไรรวม" เป็นหลัก ·
-        กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า
+        กดเลือกสาขาด้านบนเพื่อดูว่าเมนูที่ทำเงินต่างกันอย่างไรในแต่ละสาขา · กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า
       </Insight>
     </Card>
   );
@@ -349,7 +367,7 @@ export function ExtraTab({ source }) {
             แท็บนี้เป็นส่วนที่เพิ่มเอง ไม่ใช่ส่วนของโจทย์ Lab 4 · ดูว่าลูกค้าแต่ละกลุ่มซื้อรวมเท่าไร และเมนูไหนทำกำไรให้ร้านจริง
           </p>
           <AvgSpendCard rfm={d.rfm} />
-          <MenuProfitCard abc={d.abc} source={source} />
+          <MenuProfitCard source={source} />
         </div>
       )}
     </AnalyticsShell>

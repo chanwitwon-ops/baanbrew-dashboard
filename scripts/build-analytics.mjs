@@ -94,4 +94,4 @@ batch.set(db.doc("analytics/meta"), {
   alerts: alerts.map(({ date, branch, actual, expected }) => ({ date, branch, actual, expected })),
 }, { merge: true });
 await batch.commit();
-console.log(`\n✅ เขียน 5 เอกสารใน analytics/ แล้ว (ใช้โควตาเขียน 5 ครั้ง)`);
+console.log(`\n✅ เขียน ${Object.keys(docs).length} เอกสารใน analytics/ แล้ว (ใช้โควตาเขียน ${Object.keys(docs).length} ครั้ง)`);

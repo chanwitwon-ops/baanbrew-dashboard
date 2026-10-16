@@ -5,6 +5,7 @@ import { computeRfm } from "./rfm.js";
 import { computeCohorts } from "./cohort.js";
 import { computeAbc } from "./abc.js";
 import { dailyByBranch } from "./daily.js";
+import { menuByBranch } from "./menuBranch.js";
 
 /**
  * จำนวนวันที่เลื่อนประวัติให้ "เหมือนเป็นข้อมูลล่าสุด" โดยเลื่อนเป็นสัปดาห์เต็มเท่านั้น
@@ -50,5 +51,6 @@ export function buildAnalytics({ rows, products, holidays = {}, shift = 0 }) {
     },
     cohort: computeCohorts(rows, asOf),
     abc: { items: computeAbc(rows, products) },
+    menuBranch: { rows: menuByBranch(rows) }, // เสริมนอกโจทย์: ยอดเมนูแยกสาขา (แท็บ กราฟพิเศษ อ่านแยก ไม่นับใน 5 เอกสารของแท็บโจทย์)
   };
 }
