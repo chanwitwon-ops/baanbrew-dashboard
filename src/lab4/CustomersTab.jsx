@@ -264,6 +264,7 @@ const TIERS = {
 function MenuProfitCard({ abc, source }) {
   const [products, setProducts] = useState(null);
   const [err, setErr] = useState(null);
+  const [showAll, setShowAll] = useState(false);
   useEffect(() => { source.loadProducts().then(setProducts).catch((e) => setErr(e.message)); }, [source]);
   if (abc.error) return null;
   const title = "เมนูไหนทำเงินให้ร้านเท่าไร";
@@ -301,7 +302,7 @@ function MenuProfitCard({ abc, source }) {
               <th className="text-right font-medium">ขายได้ (ชิ้น)</th><th className="text-right font-medium">กำไร/ชิ้น</th><th className="pl-3 font-medium">ลักษณะ</th></tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {(showAll ? rows : rows.slice(0, 10)).map((r) => (
               <tr key={r.product_id} className="border-t border-stone-100">
                 <td className="py-1.5 text-stone-400">{r.k}</td>
                 <td>{r.name}</td>
@@ -319,14 +320,17 @@ function MenuProfitCard({ abc, source }) {
           </tbody>
         </table>
       </div>
-      <div className="mt-2 flex flex-wrap gap-4 text-sm text-stone-600">
+      <button onClick={() => setShowAll((v) => !v)} className="mt-2 rounded-lg px-3 py-1.5 text-sm text-stone-600 ring-1 ring-stone-300 hover:bg-stone-50">
+        {showAll ? `แสดงเฉพาะ 10 อันดับแรก` : `ดูทั้งหมด ${rows.length} เมนู`}
+      </button>
+      <div className="mt-3 flex flex-wrap gap-4 text-sm text-stone-600">
         {Object.entries(TIERS).map(([k, t]) => (
           <span key={k}><i className="mr-1.5 inline-block h-3 w-3 rounded-sm align-[-1px]" style={{ background: t.color }} />
             {t.th} {rows.filter((r) => r.tier === k).length} เมนู · {t.note}</span>
         ))}
       </div>
       <Insight>
-        {nA} เมนูแรกทำกำไรรวม 80% ของร้าน · {nC} เมนูท้ายรวมกันแค่ {pct(cShare, 1)} ของกำไร ·
+        {nA} เมนูแรกทำกำไรรวม 80% ของร้าน · {nC} เมนูท้าย ({rows.filter((r) => r.tier === "C").map((r) => r.name).join(", ")}) รวมกันแค่ {pct(cShare, 1)} ของกำไร ·
         แถวที่ "ขายเน้นปริมาณ" กับ "กำไรต่อชิ้นสูง" อยู่ใกล้กันในตารางได้ แปลว่าสองทางนี้ทำเงินให้ร้านพอ ๆ กัน (กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า)
       </Insight>
     </Card>
