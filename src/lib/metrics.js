@@ -153,3 +153,10 @@ export function dailyRevenue(rows) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, revenue]) => ({ date, revenue }));
 }
+
+// ===== Lab 4: ชื่อและตัวช่วยที่ src/lib/analytics และ src/lab4 ใช้ =====
+export const prepareRows = parseSalesRows;
+export const fmtBaht = (n) => "฿" + n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+export const fmtNum = (n) => n.toLocaleString("th-TH");
+export const fmtShortBaht = (n) =>
+  n >= 1_000_000 ? `฿${(n / 1_000_000).toFixed(1)} ล.` : n >= 1000 ? `฿${(n / 1000).toFixed(0)}k` : `฿${n}`;

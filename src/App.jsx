@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import BranchSalesChart from './components/BranchSalesChart';
 import CustomerSection from './components/CustomerSection';
 import DailySalesChart from './components/DailySalesChart';
@@ -7,6 +7,9 @@ import FiltersBar from './components/FiltersBar';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
 import Lab2Page from './lab2/Lab2Page';
+import CustomersTab from './lab4/CustomersTab.jsx';
+import ForecastTab from './lab4/ForecastTab.jsx';
+import { createDemoSource, firestoreSource } from './lab3/dataSource.js';
 import { isConfigured } from './lab3/firebase.js';
 import LiveTab from './lab3/LiveTab.jsx';
 import RulesTester from './lab3/RulesTester.jsx';
@@ -35,12 +38,15 @@ const loadCsv = (url) =>
     });
   });
 
+// เปิดโหมดสาธิต (คำนวณ Lab 4 ในเบราว์เซอร์ ไม่ใช้ Firebase) ด้วย ?demo
+const DEMO = new URLSearchParams(location.search).has('demo');
+
 export default function App() {
   const [sales, setSales] = useState(null);
   const [customers, setCustomers] = useState(null);
   const [products, setProducts] = useState(null);
   const [cleanSales, setCleanSales] = useState(null);
-  const TAB_IDS = ['lab2', 'live', 'rules'];
+  const TAB_IDS = ['lab2', 'live', 'menu', 'forecast', 'rules'];
   const [tab, setTab] = useState(() => TAB_IDS.find((id) => location.hash === `#${id}`) ?? 'sales');
   const [branch, setBranch] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -65,9 +71,26 @@ export default function App() {
     loadCsv(`${import.meta.env.BASE_URL}sales_clean.csv`).then((rows) => setCleanSales(parseSalesRows(rows)));
   }, [tab, cleanSales]);
 
+  // Lab 4 · แหล่งข้อมูลของแท็บวิเคราะห์: Firestore (analytics 5 เอกสาร) หรือโหมดสาธิต
+  const [demoSource, setDemoSource] = useState(null);
+  useEffect(() => {
+    if (!DEMO || demoSource || !['menu', 'forecast'].includes(tab) || !products) return;
+    const base = import.meta.env.BASE_URL;
+    Promise.all([loadCsv(`${base}sales_clean.csv`), loadCsv(`${base}thai_holidays.csv`)]).then(([rows, hol]) => {
+      const holidays = Object.fromEntries(hol.map((h) => [h.date, h.holiday]));
+      setDemoSource(createDemoSource(parseSalesRows(rows), products, holidays));
+    });
+  }, [tab, products, demoSource]);
+  const analyticsSource = useMemo(
+    () => (DEMO ? demoSource : isConfigured ? firestoreSource : null),
+    [demoSource]
+  );
+  const analyticsTab = (Tab) =>
+    analyticsSource ? <Tab source={analyticsSource} /> : DEMO ? <p className="text-matcha-500">กำลังโหลดข้อมูลสาธิต...</p> : <SetupGuide />;
+
   const chooseTab = (id) => {
     setTab(id);
-    history.replaceState(null, '', TAB_IDS.includes(id) ? `#${id}` : '#');
+    history.replaceState(null, '', TAB_IDS.includes(id) ? `${location.search}#${id}` : location.search || location.pathname);
   };
 
   if (!sales || !customers || !products) {
@@ -128,6 +151,12 @@ export default function App() {
         <TabButton active={tab === 'live'} onClick={() => chooseTab('live')} icon={<ChartIcon />}>
           สด · Firestore
         </TabButton>
+        <TabButton active={tab === 'menu'} onClick={() => chooseTab('menu')} icon={<UsersIcon />}>
+          ลูกค้า &amp; เมนู
+        </TabButton>
+        <TabButton active={tab === 'forecast'} onClick={() => chooseTab('forecast')} icon={<ChartIcon />}>
+          พยากรณ์ &amp; ผิดปกติ
+        </TabButton>
         <TabButton active={tab === 'rules'} onClick={() => chooseTab('rules')} icon={<ChartIcon />}>
           ทดสอบ Rules
         </TabButton>
@@ -163,6 +192,10 @@ export default function App() {
       )}
 
       {tab === 'live' && (isConfigured ? <LiveTab /> : <SetupGuide />)}
+
+      {tab === 'menu' && <div className="mt-6 rounded-xl bg-stone-100 p-4 text-stone-900">{analyticsTab(CustomersTab)}</div>}
+
+      {tab === 'forecast' && <div className="mt-6 rounded-xl bg-stone-100 p-4 text-stone-900">{analyticsTab(ForecastTab)}</div>}
 
       {tab === 'rules' && <div className="mt-6">{isConfigured ? <RulesTester /> : <SetupGuide />}</div>}
 
