@@ -344,6 +344,22 @@ export default function CustomersTab({ source }) {
           {picked && !d.rfm.error && <SegmentList rfm={d.rfm} picked={picked} onClose={() => setPicked(null)} />}
           <CohortCard cohort={d.cohort} />
           <AbcCard abc={d.abc} />
+        </div>
+      )}
+    </AnalyticsShell>
+  );
+}
+
+// แท็บ "กราฟพิเศษ" · ส่วนที่เพิ่มเอง ไม่ใช่โจทย์ของอาจารย์ (ใช้ข้อมูล analytics เดิม ไม่ต้องรัน pipeline ใหม่)
+export function ExtraTab({ source }) {
+  const state = useAnalytics(source);
+  return (
+    <AnalyticsShell source={source} state={state} title="กราฟพิเศษ">
+      {(d) => (
+        <div className="space-y-6">
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            แท็บนี้เป็นส่วนที่เพิ่มเอง ไม่ใช่ส่วนของโจทย์ Lab 4 · ดูว่าลูกค้าแต่ละกลุ่มซื้อรวมเท่าไร และเมนูไหนทำกำไรให้ร้านจริง
+          </p>
           <AvgSpendCard rfm={d.rfm} />
           <MenuProfitCard abc={d.abc} source={source} />
         </div>

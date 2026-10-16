@@ -7,7 +7,7 @@ import FiltersBar from './components/FiltersBar';
 import HourlyOrdersChart from './components/HourlyOrdersChart';
 import KpiCards from './components/KpiCards';
 import Lab2Page from './lab2/Lab2Page';
-import CustomersTab from './lab4/CustomersTab.jsx';
+import CustomersTab, { ExtraTab } from './lab4/CustomersTab.jsx';
 import ForecastTab from './lab4/ForecastTab.jsx';
 import { createDemoSource, firestoreSource } from './lab3/dataSource.js';
 import { isConfigured } from './lab3/firebase.js';
@@ -46,7 +46,7 @@ export default function App() {
   const [customers, setCustomers] = useState(null);
   const [products, setProducts] = useState(null);
   const [cleanSales, setCleanSales] = useState(null);
-  const TAB_IDS = ['lab2', 'live', 'menu', 'forecast', 'rules'];
+  const TAB_IDS = ['lab2', 'live', 'menu', 'forecast', 'extra', 'rules'];
   const [tab, setTab] = useState(() => TAB_IDS.find((id) => location.hash === `#${id}`) ?? 'sales');
   const [branch, setBranch] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -74,7 +74,7 @@ export default function App() {
   // Lab 4 · แหล่งข้อมูลของแท็บวิเคราะห์: Firestore (analytics 5 เอกสาร) หรือโหมดสาธิต
   const [demoSource, setDemoSource] = useState(null);
   useEffect(() => {
-    if (!DEMO || demoSource || !['menu', 'forecast'].includes(tab) || !products) return;
+    if (!DEMO || demoSource || !['menu', 'forecast', 'extra'].includes(tab) || !products) return;
     const base = import.meta.env.BASE_URL;
     Promise.all([loadCsv(`${base}sales_clean.csv`), loadCsv(`${base}thai_holidays.csv`)]).then(([rows, hol]) => {
       const holidays = Object.fromEntries(hol.map((h) => [h.date, h.holiday]));
@@ -157,6 +157,9 @@ export default function App() {
         <TabButton active={tab === 'forecast'} onClick={() => chooseTab('forecast')} icon={<ChartIcon />}>
           พยากรณ์ &amp; ผิดปกติ
         </TabButton>
+        <TabButton active={tab === 'extra'} onClick={() => chooseTab('extra')} icon={<ChartIcon />}>
+          กราฟพิเศษ
+        </TabButton>
         <TabButton active={tab === 'rules'} onClick={() => chooseTab('rules')} icon={<ChartIcon />}>
           ทดสอบ Rules
         </TabButton>
@@ -196,6 +199,8 @@ export default function App() {
       {tab === 'menu' && <div className="mt-6 rounded-xl bg-stone-100 p-4 text-stone-900">{analyticsTab(CustomersTab)}</div>}
 
       {tab === 'forecast' && <div className="mt-6 rounded-xl bg-stone-100 p-4 text-stone-900">{analyticsTab(ForecastTab)}</div>}
+
+      {tab === 'extra' && <div className="mt-6 rounded-xl bg-stone-100 p-4 text-stone-900">{analyticsTab(ExtraTab)}</div>}
 
       {tab === 'rules' && <div className="mt-6">{isConfigured ? <RulesTester /> : <SetupGuide />}</div>}
 
