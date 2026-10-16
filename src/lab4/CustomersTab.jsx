@@ -252,19 +252,19 @@ function AvgSpendCard({ rfm }) {
   );
 }
 
-// ---------------- เพิ่มเติม · เมนูไหนทำเงินให้ร้านเท่าไร (กำไรรวม = ขายได้กี่ชิ้น × กำไรต่อชิ้น) ----------------
-// ขายดีแต่กำไรบาง กับ ขายน้อยแต่กำไรหนา วัดด้วยตัวเลขเดียวกันได้: ทำเงินเข้าร้านเท่าไร
+// ---------------- เพิ่มเติม · เมนูไหนทำเงินให้ร้านเท่าไร แบ่ง 4 กลุ่ม ----------------
+// กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · ขายดี/ขายน้อย แบ่งที่ค่ากลางของจำนวนชิ้นที่ขายได้ · กำไรมาก/น้อย แบ่งที่ค่ากลางของกำไรต่อชิ้น
 // ยอดขายต่อเมนูมาจาก analytics/abc · ราคาและต้นทุนจากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
 const median = (xs) => { const a = [...xs].sort((x, y) => x - y); const n = a.length; return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; };
-const TIERS = {
-  A: { th: "ทำเงินหลัก", note: "รวมกันได้ 80% แรกของกำไร", color: "#2F7D5B" },
-  B: { th: "ทำเงินรอง", note: "ถึง 95% ของกำไร", color: "#8FC4A8" },
-  C: { th: "ทำเงินน้อย", note: "ส่วนที่เหลือ ควรทบทวนบทบาทของเมนู", color: "#d6d3d1" },
-};
+const GROUPS = [
+  { id: "star", th: "ทำเงินได้ดี", how: "ขายดี · กำไรต่อชิ้นมาก", advice: "เมนูหลักของร้าน รักษาคุณภาพและของไม่ให้ขาด", color: "#2F7D5B" },
+  { id: "volume", th: "ทำเงินได้ดีจากปริมาณ", how: "ขายดี · กำไรต่อชิ้นน้อย", advice: "กำไรบางแต่ขายเยอะ ยังทำเงินให้ร้านมาก ควรรักษาไว้ ปรับต้นทุนหรือราคาเล็กน้อยก็เพิ่มกำไรได้", color: "#2563eb" },
+  { id: "promote", th: "ควรแนะนำเพิ่ม", how: "ขายน้อย · กำไรต่อชิ้นมาก", advice: "ขายได้แต่ละชิ้นกำไรดี ลองดันเป็นเมนูแนะนำ จัดเซ็ตหรือโปรโมต", color: "#d97706" },
+  { id: "review", th: "ควรพิจารณา", how: "ขายน้อย · กำไรต่อชิ้นน้อย", advice: "ทำเงินให้ร้านน้อย ลองทบทวนบทบาท เช่น เมนูเสริมคู่เมนูหลัก หรือปรับปรุง/เลิกขาย", color: "#a8a29e" },
+];
 function MenuProfitCard({ abc, source }) {
   const [products, setProducts] = useState(null);
   const [err, setErr] = useState(null);
-  const [showAll, setShowAll] = useState(false);
   useEffect(() => { source.loadProducts().then(setProducts).catch((e) => setErr(e.message)); }, [source]);
   if (abc.error) return null;
   const title = "เมนูไหนทำเงินให้ร้านเท่าไร";
@@ -275,63 +275,47 @@ function MenuProfitCard({ abc, source }) {
     const p = cost[i.product_id];
     const unitProfit = p.price - p.cost;
     const qty = Math.round(i.revenue / p.price);
-    return { ...i, qty, unitProfit, profit: qty * unitProfit, margin: unitProfit / p.price };
-  }).sort((a, b) => b.profit - a.profit);
-  const total = base.reduce((a, i) => a + i.profit, 0);
-  const unitCut = median(base.map((i) => i.unitProfit));
-  let cum = 0;
-  const rows = base.map((i, k) => {
-    const before = cum / total;
-    cum += i.profit;
-    return {
-      ...i, k: k + 1, share: i.profit / total, cumShare: cum / total,
-      tier: before < 0.8 - 1e-9 ? "A" : before < 0.95 - 1e-9 ? "B" : "C",
-      style: i.unitProfit >= unitCut ? "กำไรต่อชิ้นสูง" : "ขายเน้นปริมาณ",
-    };
+    return { ...i, qty, unitProfit, profit: qty * unitProfit };
   });
-  const maxProfit = rows[0].profit;
-  const nA = rows.filter((r) => r.tier === "A").length;
-  const nC = rows.filter((r) => r.tier === "C").length;
-  const cShare = rows.filter((r) => r.tier === "C").reduce((a, r) => a + r.share, 0);
+  const total = base.reduce((a, i) => a + i.profit, 0);
+  const qtyCut = median(base.map((i) => i.qty));
+  const unitCut = median(base.map((i) => i.unitProfit));
+  const rows = base.map((i) => ({
+    ...i,
+    group: i.qty >= qtyCut ? (i.unitProfit >= unitCut ? "star" : "volume") : (i.unitProfit >= unitCut ? "promote" : "review"),
+  })).sort((a, b) => b.profit - a.profit);
   return (
-    <Card title={title} sub="กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · เรียงจากทำเงินมากไปน้อย · เมนูที่ทำเงินได้ใกล้กันถือว่าดีพอกัน ไม่ว่าจะขายเยอะกำไรบาง หรือขายน้อยกำไรหนา">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm tabular-nums">
-          <thead className="text-left text-stone-500">
-            <tr><th className="py-1 font-medium">#</th><th className="font-medium">เมนู</th><th className="w-[34%] font-medium">กำไรรวม</th>
-              <th className="text-right font-medium">ขายได้ (ชิ้น)</th><th className="text-right font-medium">กำไร/ชิ้น</th><th className="pl-3 font-medium">ลักษณะ</th></tr>
-          </thead>
-          <tbody>
-            {(showAll ? rows : rows.slice(0, 10)).map((r) => (
-              <tr key={r.product_id} className="border-t border-stone-100">
-                <td className="py-1.5 text-stone-400">{r.k}</td>
-                <td>{r.name}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 rounded-sm" style={{ width: `${(r.profit / maxProfit) * 70}%`, background: TIERS[r.tier].color }} />
-                    <span className="whitespace-nowrap">{fmtBaht(r.profit)} <span className="text-stone-400">({pct(r.share, 1)})</span></span>
-                  </div>
-                </td>
-                <td className="text-right">{r.qty.toLocaleString()}</td>
-                <td className="text-right">{fmtBaht(r.unitProfit)}</td>
-                <td className="pl-3 text-stone-500">{r.style}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <button onClick={() => setShowAll((v) => !v)} className="mt-2 rounded-lg px-3 py-1.5 text-sm text-stone-600 ring-1 ring-stone-300 hover:bg-stone-50">
-        {showAll ? `แสดงเฉพาะ 10 อันดับแรก` : `ดูทั้งหมด ${rows.length} เมนู`}
-      </button>
-      <div className="mt-3 flex flex-wrap gap-4 text-sm text-stone-600">
-        {Object.entries(TIERS).map(([k, t]) => (
-          <span key={k}><i className="mr-1.5 inline-block h-3 w-3 rounded-sm align-[-1px]" style={{ background: t.color }} />
-            {t.th} {rows.filter((r) => r.tier === k).length} เมนู · {t.note}</span>
-        ))}
+    <Card title={title} sub={`กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · เมนูที่ทำเงินได้ใกล้กันถือว่าดีพอกัน ไม่ว่าจะขายเยอะกำไรบาง หรือขายน้อยกำไรหนา · เส้นแบ่ง: ขายได้ ${Math.round(qtyCut).toLocaleString()} ชิ้น, กำไร ${fmtBaht(unitCut)}/ชิ้น (ค่ากลางของทุกเมนู)`}>
+      <div className="grid gap-3 md:grid-cols-2">
+        {GROUPS.map((g) => {
+          const mine = rows.filter((r) => r.group === g.id);
+          const gp = mine.reduce((a, r) => a + r.profit, 0);
+          return (
+            <div key={g.id} className="rounded-lg p-3 ring-1 ring-stone-200">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <div className="font-semibold" style={{ color: g.color }}>{g.th}</div>
+                <div className="text-xs text-stone-500">{g.how}</div>
+              </div>
+              <div className="mt-1 text-sm tabular-nums">
+                <b>{mine.length}</b> เมนู · กำไรรวม <b>{fmtBaht(gp)}</b> <span className="text-stone-500">({pct(gp / total)} ของกำไรร้าน)</span>
+              </div>
+              <p className="mt-1 text-xs text-stone-600">{g.advice}</p>
+              <ul className="mt-2 space-y-0.5 text-sm tabular-nums">
+                {mine.slice(0, 5).map((r) => (
+                  <li key={r.product_id} className="flex justify-between gap-2">
+                    <span>{r.name}</span>
+                    <span className="whitespace-nowrap text-stone-500">{fmtBaht(r.profit)} <span className="text-stone-400">· {r.qty.toLocaleString()} ชิ้น × {fmtBaht(r.unitProfit)}</span></span>
+                  </li>
+                ))}
+                {mine.length > 5 && <li className="text-xs text-stone-400">และอีก {mine.length - 5} เมนู: {mine.slice(5).map((r) => r.name).join(", ")}</li>}
+              </ul>
+            </div>
+          );
+        })}
       </div>
       <Insight>
-        {nA} เมนูแรกทำกำไรรวม 80% ของร้าน · {nC} เมนูท้าย ({rows.filter((r) => r.tier === "C").map((r) => r.name).join(", ")}) รวมกันแค่ {pct(cShare, 1)} ของกำไร ·
-        แถวที่ "ขายเน้นปริมาณ" กับ "กำไรต่อชิ้นสูง" อยู่ใกล้กันในตารางได้ แปลว่าสองทางนี้ทำเงินให้ร้านพอ ๆ กัน (กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า)
+        กลุ่ม "ทำเงินได้ดีจากปริมาณ" กำไรต่อชิ้นน้อยแต่ขายเยอะ ยังทำเงินให้ร้านได้ใกล้เคียงกลุ่มที่กำไรต่อชิ้นมาก ดูตัวเลข "กำไรรวม" เป็นหลัก ·
+        กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า
       </Insight>
     </Card>
   );
