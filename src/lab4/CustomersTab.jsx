@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  LabelList, Cell, ReferenceLine, ScatterChart, Scatter,
+  LabelList, Cell, ReferenceLine,
 } from "recharts";
 import { AnalyticsShell, Card, Pending, Insight, GREEN, MAIN, MUTED, INK, pct, thaiMonth } from "./ui.jsx";
 import { useAnalytics } from "./useAnalytics.js";
@@ -252,75 +252,82 @@ function AvgSpendCard({ rfm }) {
   );
 }
 
-// ---------------- เพิ่มเติม · เมนูไหนควรทำอะไร (ขายดี × กำไรต่อชิ้น) ----------------
-// ความนิยมใช้ยอดขายจาก analytics/abc · กำไรต่อชิ้น = ราคา − ต้นทุน จากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
+// ---------------- เพิ่มเติม · เมนูไหนทำเงินให้ร้านเท่าไร (กำไรรวม = ขายได้กี่ชิ้น × กำไรต่อชิ้น) ----------------
+// ขายดีแต่กำไรบาง กับ ขายน้อยแต่กำไรหนา วัดด้วยตัวเลขเดียวกันได้: ทำเงินเข้าร้านเท่าไร
+// ยอดขายต่อเมนูมาจาก analytics/abc · ราคาและต้นทุนจากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
 const median = (xs) => { const a = [...xs].sort((x, y) => x - y); const n = a.length; return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; };
-const QUADS = {
-  star: { th: "รักษาไว้", sub: "ขายดี · กำไรสูง", color: "#2F7D5B" },
-  promote: { th: "ควรโปรโมต", sub: "ขายน้อย · กำไรสูง", color: "#d97706" },
-  reprice: { th: "ทบทวนราคา/ต้นทุน", sub: "ขายดี · กำไรต่ำ", color: "#2563eb" },
-  review: { th: "ทบทวนว่าจะเก็บไหม", sub: "ขายน้อย · กำไรต่ำ", color: "#a8a29e" },
+const TIERS = {
+  A: { th: "ทำเงินหลัก", note: "รวมกันได้ 80% แรกของกำไร", color: "#2F7D5B" },
+  B: { th: "ทำเงินรอง", note: "ถึง 95% ของกำไร", color: "#8FC4A8" },
+  C: { th: "ทำเงินน้อย", note: "ส่วนที่เหลือ ควรทบทวนบทบาทของเมนู", color: "#d6d3d1" },
 };
-function MenuActionCard({ abc, source }) {
+function MenuProfitCard({ abc, source }) {
   const [products, setProducts] = useState(null);
   const [err, setErr] = useState(null);
   useEffect(() => { source.loadProducts().then(setProducts).catch((e) => setErr(e.message)); }, [source]);
   if (abc.error) return null;
-  if (err) return <Card title="เมนูไหนควรทำอะไร"><Pending lab="ข้อมูลต้นทุน" error={err} /></Card>;
-  if (!products) return <Card title="เมนูไหนควรทำอะไร"><p className="text-stone-500">กำลังโหลดต้นทุนเมนู…</p></Card>;
+  const title = "เมนูไหนทำเงินให้ร้านเท่าไร";
+  if (err) return <Card title={title}><Pending lab="ข้อมูลต้นทุน" error={err} /></Card>;
+  if (!products) return <Card title={title}><p className="text-stone-500">กำลังโหลดต้นทุนเมนู…</p></Card>;
   const cost = Object.fromEntries(products.map((p) => [p.product_id, p]));
-  const items = abc.items.filter((i) => cost[i.product_id]).map((i) => {
+  const base = abc.items.filter((i) => cost[i.product_id]).map((i) => {
     const p = cost[i.product_id];
-    return { ...i, profit: p.price - p.cost, margin: (p.price - p.cost) / p.price };
+    const unitProfit = p.price - p.cost;
+    const qty = Math.round(i.revenue / p.price);
+    return { ...i, qty, unitProfit, profit: qty * unitProfit, margin: unitProfit / p.price };
+  }).sort((a, b) => b.profit - a.profit);
+  const total = base.reduce((a, i) => a + i.profit, 0);
+  const unitCut = median(base.map((i) => i.unitProfit));
+  let cum = 0;
+  const rows = base.map((i, k) => {
+    const before = cum / total;
+    cum += i.profit;
+    return {
+      ...i, k: k + 1, share: i.profit / total, cumShare: cum / total,
+      tier: before < 0.8 - 1e-9 ? "A" : before < 0.95 - 1e-9 ? "B" : "C",
+      style: i.unitProfit >= unitCut ? "กำไรต่อชิ้นสูง" : "ขายเน้นปริมาณ",
+    };
   });
-  const shareCut = median(items.map((i) => i.share));
-  const profitCut = median(items.map((i) => i.profit));
-  const data = items.map((i) => ({
-    ...i,
-    x: i.share * 100,
-    quad: i.share >= shareCut ? (i.profit >= profitCut ? "star" : "reprice") : (i.profit >= profitCut ? "promote" : "review"),
-  }));
+  const maxProfit = rows[0].profit;
+  const nA = rows.filter((r) => r.tier === "A").length;
+  const nC = rows.filter((r) => r.tier === "C").length;
+  const cShare = rows.filter((r) => r.tier === "C").reduce((a, r) => a + r.share, 0);
   return (
-    <Card title="เมนูไหนควรทำอะไร" sub={`แกนนอน = สัดส่วนยอดขาย · แกนตั้ง = กำไรต่อชิ้น (ราคา − ต้นทุน) · เส้นประ = ค่ากลางของทุกเมนู (ยอดขาย ${pct(shareCut, 1)}, กำไร ${fmtBaht(profitCut)}/ชิ้น)`}>
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 16 }}>
-            <CartesianGrid stroke="#eee" />
-            <XAxis type="number" dataKey="x" name="สัดส่วนยอดขาย" unit="%" tick={{ fontSize: 12 }} label={{ value: "สัดส่วนยอดขาย (%)", position: "insideBottom", offset: -8, fontSize: 12 }} />
-            <YAxis type="number" dataKey="profit" name="กำไรต่อชิ้น" tickFormatter={(v) => fmtBaht(v)} width={56} tick={{ fontSize: 12 }} />
-            <ReferenceLine x={shareCut * 100} stroke={MUTED} strokeDasharray="4 4" />
-            <ReferenceLine y={profitCut} stroke={MUTED} strokeDasharray="4 4" />
-            <Tooltip cursor={{ strokeDasharray: "3 3" }}
-                     content={({ active, payload }) => {
-                       const d = active && payload?.[0]?.payload;
-                       return d ? (
-                         <div className="rounded-lg bg-white p-2 text-sm shadow ring-1 ring-stone-200">
-                           <div className="font-medium">{d.name}</div>
-                           <div>ยอดขาย {pct(d.share, 1)} · กำไร {fmtBaht(d.profit)}/ชิ้น ({pct(d.margin)})</div>
-                           <div style={{ color: QUADS[d.quad].color }}>{QUADS[d.quad].th}</div>
-                         </div>
-                       ) : null;
-                     }} />
-            <Scatter data={data} isAnimationActive={false}>
-              {data.map((d) => <Cell key={d.product_id} fill={QUADS[d.quad].color} />)}
-            </Scatter>
-          </ScatterChart>
-        </ResponsiveContainer>
+    <Card title={title} sub="กำไรรวม = จำนวนที่ขายได้ × (ราคา − ต้นทุน) · เรียงจากทำเงินมากไปน้อย · เมนูที่ทำเงินได้ใกล้กันถือว่าดีพอกัน ไม่ว่าจะขายเยอะกำไรบาง หรือขายน้อยกำไรหนา">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm tabular-nums">
+          <thead className="text-left text-stone-500">
+            <tr><th className="py-1 font-medium">#</th><th className="font-medium">เมนู</th><th className="w-[34%] font-medium">กำไรรวม</th>
+              <th className="text-right font-medium">ขายได้ (ชิ้น)</th><th className="text-right font-medium">กำไร/ชิ้น</th><th className="pl-3 font-medium">ลักษณะ</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.product_id} className="border-t border-stone-100">
+                <td className="py-1.5 text-stone-400">{r.k}</td>
+                <td>{r.name}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 rounded-sm" style={{ width: `${(r.profit / maxProfit) * 70}%`, background: TIERS[r.tier].color }} />
+                    <span className="whitespace-nowrap">{fmtBaht(r.profit)} <span className="text-stone-400">({pct(r.share, 1)})</span></span>
+                  </div>
+                </td>
+                <td className="text-right">{r.qty.toLocaleString()}</td>
+                <td className="text-right">{fmtBaht(r.unitProfit)}</td>
+                <td className="pl-3 text-stone-500">{r.style}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {Object.entries(QUADS).map(([k, q]) => {
-          const names = data.filter((d) => d.quad === k).sort((a, b) => b.share - a.share).map((d) => d.name);
-          return (
-            <div key={k} className="rounded-lg bg-stone-50 p-3 text-sm">
-              <div className="font-medium" style={{ color: q.color }}>{q.th} <span className="font-normal text-stone-500">· {q.sub} · {names.length} เมนู</span></div>
-              <div className="mt-1 text-stone-700">{names.join(", ") || "–"}</div>
-            </div>
-          );
-        })}
+      <div className="mt-2 flex flex-wrap gap-4 text-sm text-stone-600">
+        {Object.entries(TIERS).map(([k, t]) => (
+          <span key={k}><i className="mr-1.5 inline-block h-3 w-3 rounded-sm align-[-1px]" style={{ background: t.color }} />
+            {t.th} {rows.filter((r) => r.tier === k).length} เมนู · {t.note}</span>
+        ))}
       </div>
       <Insight>
-        กราฟนี้ใช้ตัดสินใจได้ตรงกว่ากราฟ Pareto: "ควรโปรโมต" คือเมนูที่ขายแต่ละชิ้นได้กำไรดีแต่ยังขายน้อย ส่วน "ทบทวนราคา/ต้นทุน" คือเมนูที่ลูกค้าชอบแต่แต่ละชิ้นกำไรต่ำ
-        (ใช้ค่ากลางของเมนูเป็นเส้นแบ่ง เป็นแนวทางเบื้องต้น ไม่ใช่กฎตายตัว)
+        {nA} เมนูแรกทำกำไรรวม 80% ของร้าน · {nC} เมนูท้ายรวมกันแค่ {pct(cShare, 1)} ของกำไร ·
+        แถวที่ "ขายเน้นปริมาณ" กับ "กำไรต่อชิ้นสูง" อยู่ใกล้กันในตารางได้ แปลว่าสองทางนี้ทำเงินให้ร้านพอ ๆ กัน (กำไรคิดจากต้นทุนวัตถุดิบในเมนู ยังไม่รวมค่าแรงและค่าเช่า)
       </Insight>
     </Card>
   );
@@ -338,7 +345,7 @@ export default function CustomersTab({ source }) {
           <CohortCard cohort={d.cohort} />
           <AbcCard abc={d.abc} />
           <AvgSpendCard rfm={d.rfm} />
-          <MenuActionCard abc={d.abc} source={source} />
+          <MenuProfitCard abc={d.abc} source={source} />
         </div>
       )}
     </AnalyticsShell>
