@@ -1,8 +1,8 @@
 // Lab 4.1–4.2 · ลูกค้าและเมนู: RFM, Cohort, ABC
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  LabelList, Cell, ReferenceLine,
+  LabelList, Cell, ReferenceLine, ScatterChart, Scatter,
 } from "recharts";
 import { AnalyticsShell, Card, Pending, Insight, GREEN, MAIN, MUTED, INK, pct, thaiMonth } from "./ui.jsx";
 import { useAnalytics } from "./useAnalytics.js";
@@ -252,6 +252,80 @@ function AvgSpendCard({ rfm }) {
   );
 }
 
+// ---------------- เพิ่มเติม · เมนูไหนควรทำอะไร (ขายดี × กำไรต่อชิ้น) ----------------
+// ความนิยมใช้ยอดขายจาก analytics/abc · กำไรต่อชิ้น = ราคา − ต้นทุน จากเอกสาร products (อ่านครั้งเดียว ~40 เอกสาร)
+const median = (xs) => { const a = [...xs].sort((x, y) => x - y); const n = a.length; return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; };
+const QUADS = {
+  star: { th: "รักษาไว้", sub: "ขายดี · กำไรสูง", color: "#2F7D5B" },
+  promote: { th: "ควรโปรโมต", sub: "ขายน้อย · กำไรสูง", color: "#d97706" },
+  reprice: { th: "ทบทวนราคา/ต้นทุน", sub: "ขายดี · กำไรต่ำ", color: "#2563eb" },
+  review: { th: "ทบทวนว่าจะเก็บไหม", sub: "ขายน้อย · กำไรต่ำ", color: "#a8a29e" },
+};
+function MenuActionCard({ abc, source }) {
+  const [products, setProducts] = useState(null);
+  const [err, setErr] = useState(null);
+  useEffect(() => { source.loadProducts().then(setProducts).catch((e) => setErr(e.message)); }, [source]);
+  if (abc.error) return null;
+  if (err) return <Card title="เมนูไหนควรทำอะไร"><Pending lab="ข้อมูลต้นทุน" error={err} /></Card>;
+  if (!products) return <Card title="เมนูไหนควรทำอะไร"><p className="text-stone-500">กำลังโหลดต้นทุนเมนู…</p></Card>;
+  const cost = Object.fromEntries(products.map((p) => [p.product_id, p]));
+  const items = abc.items.filter((i) => cost[i.product_id]).map((i) => {
+    const p = cost[i.product_id];
+    return { ...i, profit: p.price - p.cost, margin: (p.price - p.cost) / p.price };
+  });
+  const shareCut = median(items.map((i) => i.share));
+  const profitCut = median(items.map((i) => i.profit));
+  const data = items.map((i) => ({
+    ...i,
+    x: i.share * 100,
+    quad: i.share >= shareCut ? (i.profit >= profitCut ? "star" : "reprice") : (i.profit >= profitCut ? "promote" : "review"),
+  }));
+  return (
+    <Card title="เมนูไหนควรทำอะไร" sub={`แกนนอน = สัดส่วนยอดขาย · แกนตั้ง = กำไรต่อชิ้น (ราคา − ต้นทุน) · เส้นประ = ค่ากลางของทุกเมนู (ยอดขาย ${pct(shareCut, 1)}, กำไร ${fmtBaht(profitCut)}/ชิ้น)`}>
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 16 }}>
+            <CartesianGrid stroke="#eee" />
+            <XAxis type="number" dataKey="x" name="สัดส่วนยอดขาย" unit="%" tick={{ fontSize: 12 }} label={{ value: "สัดส่วนยอดขาย (%)", position: "insideBottom", offset: -8, fontSize: 12 }} />
+            <YAxis type="number" dataKey="profit" name="กำไรต่อชิ้น" tickFormatter={(v) => fmtBaht(v)} width={56} tick={{ fontSize: 12 }} />
+            <ReferenceLine x={shareCut * 100} stroke={MUTED} strokeDasharray="4 4" />
+            <ReferenceLine y={profitCut} stroke={MUTED} strokeDasharray="4 4" />
+            <Tooltip cursor={{ strokeDasharray: "3 3" }}
+                     content={({ active, payload }) => {
+                       const d = active && payload?.[0]?.payload;
+                       return d ? (
+                         <div className="rounded-lg bg-white p-2 text-sm shadow ring-1 ring-stone-200">
+                           <div className="font-medium">{d.name}</div>
+                           <div>ยอดขาย {pct(d.share, 1)} · กำไร {fmtBaht(d.profit)}/ชิ้น ({pct(d.margin)})</div>
+                           <div style={{ color: QUADS[d.quad].color }}>{QUADS[d.quad].th}</div>
+                         </div>
+                       ) : null;
+                     }} />
+            <Scatter data={data} isAnimationActive={false}>
+              {data.map((d) => <Cell key={d.product_id} fill={QUADS[d.quad].color} />)}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {Object.entries(QUADS).map(([k, q]) => {
+          const names = data.filter((d) => d.quad === k).sort((a, b) => b.share - a.share).map((d) => d.name);
+          return (
+            <div key={k} className="rounded-lg bg-stone-50 p-3 text-sm">
+              <div className="font-medium" style={{ color: q.color }}>{q.th} <span className="font-normal text-stone-500">· {q.sub} · {names.length} เมนู</span></div>
+              <div className="mt-1 text-stone-700">{names.join(", ") || "–"}</div>
+            </div>
+          );
+        })}
+      </div>
+      <Insight>
+        กราฟนี้ใช้ตัดสินใจได้ตรงกว่ากราฟ Pareto: "ควรโปรโมต" คือเมนูที่ขายแต่ละชิ้นได้กำไรดีแต่ยังขายน้อย ส่วน "ทบทวนราคา/ต้นทุน" คือเมนูที่ลูกค้าชอบแต่แต่ละชิ้นกำไรต่ำ
+        (ใช้ค่ากลางของเมนูเป็นเส้นแบ่ง เป็นแนวทางเบื้องต้น ไม่ใช่กฎตายตัว)
+      </Insight>
+    </Card>
+  );
+}
+
 export default function CustomersTab({ source }) {
   const state = useAnalytics(source);
   const [picked, setPicked] = useState(null);
@@ -264,6 +338,7 @@ export default function CustomersTab({ source }) {
           <CohortCard cohort={d.cohort} />
           <AbcCard abc={d.abc} />
           <AvgSpendCard rfm={d.rfm} />
+          <MenuActionCard abc={d.abc} source={source} />
         </div>
       )}
     </AnalyticsShell>
